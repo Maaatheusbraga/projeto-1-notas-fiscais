@@ -95,7 +95,15 @@ def converter_tipos(df: pd.DataFrame) -> pd.DataFrame:
       pd.to_datetime(..., format="%d/%m/%Y", errors="coerce") e combinar com .fillna()
       No final, deixe como texto AAAA-MM-DD: .dt.strftime("%Y-%m-%d")
     """
-    # TODO
+    df["valor_total"] = df["valor_total"].apply(converter_valor)
+    df["valor_icms"] = df["valor_icms"].apply(converter_valor)
+    df = df.dropna(subset="valor_total")
+    d = df["data_emissao"]
+    datas = pd.to_datetime(d, format="%Y-%m-%d", errors="coerce")
+    datas = datas.fillna(pd.to_datetime(d, format="%d/%m/%Y", errors="coerce"))
+    datas = datas.fillna(pd.to_datetime(d, format="%d-%m-%Y", errors="coerce"))
+    df["data_emissao"] = datas.dt.strftime("%Y-%m-%d")
+
     return df
 
 
