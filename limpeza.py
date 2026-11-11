@@ -55,7 +55,10 @@ def padronizar_textos(df: pd.DataFrame) -> pd.DataFrame:
     - CNPJ: remover tudo que não é dígito com .str.replace(r"\\D", "", regex=True)
       e depois .str.zfill(14)
     """
-    # TODO
+    df["uf"] = df["uf"].str.strip().str.upper()
+    df["razao_social"] = df["razao_social"].str.strip().str.upper()
+    df["situacao"] = df["situacao"].str.strip().str.lower()
+    df["cnpj_emitente"] = df["cnpj_emitente"].str.replace(r"\D", "", regex=True).str.zfill(14)
     return df
 
 
