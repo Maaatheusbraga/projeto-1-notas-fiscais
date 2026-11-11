@@ -20,14 +20,16 @@ SAIDA = PASTA / "saida"
 
 def ler_dados() -> pd.DataFrame:
     """Missão 2: ler o CSV bruto.
-
-    Dicas:
+     Dicas:
     - o separador é ponto e vírgula (sep=";")
     - leia TUDO como texto (dtype=str), senão o pandas come os zeros
       à esquerda do CNPJ, exatamente como o Excel faz.
     """
+
     df = pd.read_csv(ENTRADA, sep=";", dtype=str)
     return df
+
+ 
 
 
 def remover_lixo(df: pd.DataFrame) -> pd.DataFrame:
@@ -36,8 +38,12 @@ def remover_lixo(df: pd.DataFrame) -> pd.DataFrame:
     Dicas: df.dropna(how="all") e df.drop_duplicates(subset="numero_nf")
     Pense em SQL: é um SELECT DISTINCT com WHERE numero_nf IS NOT NULL.
     """
-    # TODO
+    
+    df = df.dropna(how="all")
+    df = df.drop_duplicates(subset="numero_nf")
+    
     return df
+
 
 
 def padronizar_textos(df: pd.DataFrame) -> pd.DataFrame:
