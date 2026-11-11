@@ -72,8 +72,17 @@ def converter_valor(texto):
     Teste no terminal antes de seguir:
         python -c "from limpeza import converter_valor as c; print(c('R$ 1.234,56'), c('1234.56'))"
     """
-    # TODO
-    return texto
+    if pd.isna(texto):
+        return None
+    
+    texto = texto.replace("R$", "").strip()
+
+    if "," in texto:
+        texto = texto.replace(".", "")
+        texto = texto.replace(",", ".")
+
+    
+    return float(texto)
 
 
 def converter_tipos(df: pd.DataFrame) -> pd.DataFrame:
