@@ -1,137 +1,140 @@
-"""
-Projeto 1: limpeza de notas fiscais.
+from pathlib import Path #IMPORTA O "PATH", UMA FERRAMENTA PARA MONTAR CAMINHOS DE PASTAS E ARQUIVOS
+import pandas as pd #IMPORTACAO DAS BIBLIOTECAS (PD E O APELIDO DO PANDAS)
 
-Lê dados/notas_fiscais_brutas.csv, limpa e grava:
-  - saida/notas_limpas.csv
-  - saida/relatorio.txt
+# __FILE__ = O CAMINHO DESTE PROPRIO ARQUIVO (LIMPEZA.PY). .PARENT = A PASTA ONDE ELE ESTA
+PASTA = Path(__file__).parent #DECLARANDO UMA VARIAVEL COM A PASTA DO PROJETO (ONDE ESTA O LIMPEZA.PY)
+# A BARRA "/" AQUI NAO E DIVISAO: COM PATH ELA "JUNTA" PEDACOS DE CAMINHO -> PASTA\dados\notas_fiscais_brutas.csv
+ENTRADA = PASTA / "dados" / "notas_fiscais_brutas.csv" #PASSANDO O CAMINHO COMPLETO DO CSV BRUTO
+SAIDA = PASTA / "saida" #CAMINHO DA PASTA ONDE VAMOS GRAVAR OS RESULTADOS
 
-Siga as missões do README.md. Cada função abaixo é uma missão.
-Rode com:  python limpeza.py
-Confira com:  python verificar.py
-"""
-from pathlib import Path
-
-import pandas as pd
-
-PASTA = Path(__file__).parent
-ENTRADA = PASTA / "dados" / "notas_fiscais_brutas.csv"
-SAIDA = PASTA / "saida"
+# NOMES EM MAIUSCULO (PASTA, ENTRADA, SAIDA) = CONVENCAO PARA "CONSTANTE": VALOR FIXO QUE NAO MUDA DURANTE O SCRIPT
 
 
-def ler_dados() -> pd.DataFrame:
-    """Missão 2: ler o CSV bruto.
-     Dicas:
-    - o separador é ponto e vírgula (sep=";")
-    - leia TUDO como texto (dtype=str), senão o pandas come os zeros
-      à esquerda do CNPJ, exatamente como o Excel faz.
-    """
+# "-> pd.DataFrame" E SO UM AVISO: ESSA FUNCAO DEVOLVE UMA TABELA DO PANDAS (NAO OBRIGA NADA, E DOCUMENTACAO)
+def ler_dados() -> pd.DataFrame: #def e uma funcao, entao ta criando uma funcao que LE O CSV E DEVOLVE UMA TABELA (DATAFRAME)
 
-    df = pd.read_csv(ENTRADA, sep=";", dtype=str)
-    return df
+    # SEP=";" -> SEPARADOR DE COLUNAS E PONTO E VIRGULA
+    # DTYPE=STR -> LE TUDO COMO TEXTO, PARA O PANDAS NAO TRANSFORMAR CNPJ EM NUMERO E COMER OS ZEROS A ESQUERDA
+    df = pd.read_csv(ENTRADA, sep=";", dtype=str) #DEFININDO QUE A FUNCAO VAI USAR O PANDAS READ_CSV E GUARDAR A TABELA NA VARIAVEL DF
 
- 
-
-
-def remover_lixo(df: pd.DataFrame) -> pd.DataFrame:
-    """Missão 3: remover linhas vazias e notas duplicadas.
-
-    Dicas: df.dropna(how="all") e df.drop_duplicates(subset="numero_nf")
-    Pense em SQL: é um SELECT DISTINCT com WHERE numero_nf IS NOT NULL.
-    """
-    
-    df = df.dropna(how="all")
-    df = df.drop_duplicates(subset="numero_nf")
-    
-    return df
+    return df #DEVOLVE A TABELA PARA QUEM CHAMOU A FUNCAO (NO CASO, O MAIN LA EMBAIXO)
 
 
 
-def padronizar_textos(df: pd.DataFrame) -> pd.DataFrame:
-    """Missão 4: padronizar razao_social, uf, situacao e cnpj_emitente.
+# (df: pd.DataFrame) -> A FUNCAO RECEBE UMA TABELA (DF) E DEVOLVE OUTRA TABELA, JA LIMPA
+def remover_lixo(df: pd.DataFrame) -> pd.DataFrame: #FUNCAO QUE REMOVE LINHAS VAZIAS E DUPLICADAS
 
-    Dicas:
-    - df["uf"] = df["uf"].str.strip().str.upper()   (equivale a UPPER(TRIM(uf)))
-    - situacao em minúsculas
-    - CNPJ: remover tudo que não é dígito com .str.replace(r"\\D", "", regex=True)
-      e depois .str.zfill(14)
-    """
-    df["uf"] = df["uf"].str.strip().str.upper()
-    df["razao_social"] = df["razao_social"].str.strip().str.upper()
-    df["situacao"] = df["situacao"].str.strip().str.lower()
-    df["cnpj_emitente"] = df["cnpj_emitente"].str.replace(r"\D", "", regex=True).str.zfill(14)
-    return df
+    # DROPNA = REMOVE LINHAS COM VAZIO. HOW="ALL" -> SO REMOVE SE A LINHA INTEIRA ESTIVER VAZIA
+    # (SE FOSSE HOW="ANY", REMOVERIA LINHAS COM QUALQUER CAMPO VAZIO E PERDERIAMOS NOTAS BOAS)
+    df = df.dropna(how="all") #REMOVENDO AS LINHAS TOTALMENTE EM BRANCO
+
+    # DROP_DUPLICATES = MANTEM SO A PRIMEIRA OCORRENCIA. SUBSET="NUMERO_NF" -> COMPARA SO POR ESSA COLUNA
+    df = df.drop_duplicates(subset="numero_nf") #REMOVENDO NOTAS REPETIDAS (PARECIDO COM UM SELECT DISTINCT POR NUMERO_NF)
+    # "DF = " NA FRENTE: O PANDAS NAO ALTERA A TABELA ORIGINAL, ELE DEVOLVE UMA NOVA. SEM O "DF =", O RESULTADO SE PERDE
+
+    return df #DEVOLVE A TABELA SEM LIXO
 
 
-def converter_valor(texto):
-    """Missão 5a: converter UM valor em texto para número (float).
 
-    Formatos que aparecem no arquivo:
-        "R$ 1.234,56"   "1.234,56"   "1234.56"   "" (vazio)
-    Retorne None quando estiver vazio.
+def padronizar_textos(df: pd.DataFrame) -> pd.DataFrame: #FUNCAO PADRONIZAR TEXTOS
 
-    Teste no terminal antes de seguir:
-        python -c "from limpeza import converter_valor as c; print(c('R$ 1.234,56'), c('1234.56'))"
-    """
-    if pd.isna(texto):
-        return None
-    
-    texto = texto.replace("R$", "").strip()
-
-    if "," in texto:
-        texto = texto.replace(".", "")
-        texto = texto.replace(",", ".")
-
-    
-    return float(texto)
+    # .STR = DA ACESSO AS FUNCOES DE TEXTO NA COLUNA INTEIRA (SEM O .STR O STRIP NAO FUNCIONA NA COLUNA)
+    df["uf"] = df["uf"].str.strip().str.upper() # PASSANDO A COLUNA UF E RETIRANDO O ESPACOS E SETANDO OS CARACTERES TOTALMENTE MAIUSCULOS
+    df["razao_social"] = df["razao_social"].str.strip().str.upper() # PASSANDO A COLUNA RAZAO_SOCIAL E RETIRANDO O ESPACOS E SETANDO OS CARACTERES TOTALMENTE MAIUSCULOS
+    df["situacao"] = df["situacao"].str.strip().str.lower() # PASSANDO A COLUNA SITUACAO E RETIRANDO O ESPACOS E SETANDO OS CARACTERES TOTALMENTE MINUSCULAS
+    # R"\D" = REGEX (EXPRESSAO REGULAR) QUE SIGNIFICA "QUALQUER CARACTERE QUE NAO E DIGITO" (PONTO, BARRA, TRACO)
+    # REGEX=TRUE -> AVISA QUE O PRIMEIRO TEXTO E UMA REGEX, NAO UM TEXTO NORMAL
+    # ZFILL(14) -> COMPLETA COM ZEROS A ESQUERDA ATE TER 14 CARACTERES ("191" VIRA "00000000000191")
+    df["cnpj_emitente"] = df["cnpj_emitente"].str.replace(r"\D", "", regex=True).str.zfill(14) # PASSANDO A COLUNA CNPJ_EMITENTE, SUBSTITUINDO TUDO QUE NAO E NUMERO POR NADA E COMPLETANDO COM ZEROS ATE 14 DIGITOS
+    return df #DEVOLVE A TABELA PADRONIZADA
 
 
-def converter_tipos(df: pd.DataFrame) -> pd.DataFrame:
-    """Missão 5b: converter valores e datas.
+# ESTA FUNCAO TRABALHA COM *UM* VALOR (UMA CELULA), NAO COM A TABELA. QUEM APLICA NA COLUNA INTEIRA E O .APPLY LA EMBAIXO
+def converter_valor(texto): #RECEBE UM TEXTO TIPO "R$ 1.234,56" E DEVOLVE O NUMERO 1234.56
 
-    - valor_total e valor_icms: use df["valor_total"].apply(converter_valor)
-    - depois remova as linhas sem valor_total
-    - data_emissao tem 3 formatos (AAAA-MM-DD, DD/MM/AAAA, DD-MM-AAAA).
-      Uma saída: converter cada formato separadamente com
-      pd.to_datetime(..., format="%d/%m/%Y", errors="coerce") e combinar com .fillna()
-      No final, deixe como texto AAAA-MM-DD: .dt.strftime("%Y-%m-%d")
-    """
-    df["valor_total"] = df["valor_total"].apply(converter_valor)
-    df["valor_icms"] = df["valor_icms"].apply(converter_valor)
-    df = df.dropna(subset="valor_total")
-    d = df["data_emissao"]
-    datas = pd.to_datetime(d, format="%Y-%m-%d", errors="coerce")
-    datas = datas.fillna(pd.to_datetime(d, format="%d/%m/%Y", errors="coerce"))
-    datas = datas.fillna(pd.to_datetime(d, format="%d-%m-%Y", errors="coerce"))
-    df["data_emissao"] = datas.dt.strftime("%Y-%m-%d")
+    # CORRIGIDO: O PD.ISNA NAO ALTERA NADA, ELE SO *PERGUNTA* "ESTE VALOR ESTA VAZIO?" E RESPONDE TRUE OU FALSE
+    if pd.isna(texto): #SE O VALOR ESTIVER VAZIO (NAN)...
+        return None #...DEVOLVE NONE (O "NULL" DO PYTHON) E A FUNCAO PARA AQUI
 
-    return df
+    texto = texto.replace("R$", "").strip() #SUBSTITUINDO R$ POR NADA E TIRANDO OS ESPACOS (NESSA ORDEM, SENAO SOBRA ESPACO)
+
+    # CORRIGIDO: PRIMEIRO TIRA OS PONTOS (TROCA "." POR NADA), DEPOIS TROCA "," POR "."
+    # "1.234,56" -> "1234,56" -> "1234.56"   |   O "1234.56" NAO TEM VIRGULA, ENTAO NEM ENTRA NO IF
+    if "," in texto: #SE EXISTIR VIRGULA NO TEXTO, E FORMATO BRASILEIRO...
+        texto = texto.replace(".", "") #...REMOVE O PONTO DE MILHAR
+        texto = texto.replace(",", ".") #...E TROCA A VIRGULA DECIMAL POR PONTO (FORMATO QUE O PYTHON ENTENDE)
+
+
+    return float(texto) #RETORNANDO O TEXTO CONVERTIDO EM FLOAT (NUMERO COM CASAS DECIMAIS)
+
+
+def converter_tipos(df: pd.DataFrame) -> pd.DataFrame: #FUNCAO QUE CONVERTE VALORES EM NUMERO E PADRONIZA AS DATAS
+
+    # .APPLY(CONVERTER_VALOR) -> CHAMA A NOSSA FUNCAO PARA CADA CELULA DA COLUNA (COMO UMA FUNCTION NUM UPDATE DO SQL)
+    # VAI SEM PARENTESES: ESTAMOS ENTREGANDO A FUNCAO PARA O PANDAS EXECUTAR, NAO EXECUTANDO NOS MESMOS
+    df["valor_total"] = df["valor_total"].apply(converter_valor) #CONVERTENDO A COLUNA VALOR_TOTAL DE TEXTO PARA NUMERO
+    df["valor_icms"] = df["valor_icms"].apply(converter_valor) #CONVERTENDO A COLUNA VALOR_ICMS DE TEXTO PARA NUMERO
+    # SUBSET="VALOR_TOTAL" -> SO OLHA ESSA COLUNA: REMOVE A NOTA SE NAO TIVER VALOR (PARECIDO COM WHERE VALOR_TOTAL IS NOT NULL)
+    df = df.dropna(subset="valor_total") #REMOVENDO AS NOTAS SEM VALOR TOTAL
+
+    d = df["data_emissao"] #APELIDO CURTO PARA A COLUNA DE DATA, PARA NAO REPETIR O NOME TODA HORA
+    # TO_DATETIME = CONVERTE TEXTO EM DATA. FORMAT = O "MOLDE" (%Y ANO, %m MES, %d DIA)
+    # ERRORS="COERCE" -> O QUE NAO ENCAIXAR NO MOLDE VIRA VAZIO (NAT) EM VEZ DE DAR ERRO
+    datas = pd.to_datetime(d, format="%Y-%m-%d", errors="coerce") #TENTATIVA 1: DATAS NO FORMATO 2026-03-15
+    # FILLNA = PREENCHE SO OS BURACOS, MANTENDO O QUE JA FOI CONVERTIDO (IGUAL AO COALESCE DO SQL)
+    datas = datas.fillna(pd.to_datetime(d, format="%d/%m/%Y", errors="coerce")) #TENTATIVA 2: ONDE FICOU VAZIO, TENTA 15/03/2026
+    datas = datas.fillna(pd.to_datetime(d, format="%d-%m-%Y", errors="coerce")) #TENTATIVA 3: ONDE AINDA FICOU VAZIO, TENTA 15-03-2026
+    # .DT = DA ACESSO AS FUNCOES DE DATA. STRFTIME = ESCREVE A DATA COMO TEXTO NO FORMATO PEDIDO
+    df["data_emissao"] = datas.dt.strftime("%Y-%m-%d") #GRAVANDO AS DATAS DE VOLTA NA TABELA, TODAS NO FORMATO AAAA-MM-DD
+
+    return df #DEVOLVE A TABELA COM VALORES EM NUMERO E DATAS PADRONIZADAS
 
 
 def gerar_relatorio(df: pd.DataFrame) -> str:
-    """Missão 6: montar um texto com:
-    - quantidade de notas e valor total
-    - valor total por UF (groupby, igual ao GROUP BY do SQL)
-    - quantidade de canceladas
-    - top 5 emitentes por valor, só notas autorizadas
-    """
-    # TODO
-    return "Relatório ainda não implementado\n"
+   
+    linhas = [] #LISTA VAZIA: VAI GUARDAR CADA LINHA DO RELATORIO
+
+    linhas.append("RELATORIO DE NOTAS FISCAIS")
+    linhas.append(f"Total de notas: {len(df)}")
+    linhas.append(f"Valor total: R$ {df['valor_total'].sum():,.2f}")
+
+    linhas.append("")
+    linhas.append("Valor por UF:")
+    por_uf = df.groupby("uf")["valor_total"].sum().sort_values(ascending=False)
+    linhas.append(por_uf.to_string())
+
+    linhas.append("")
+    linhas.append(f"Notas canceladas: {len(df[df['situacao'] == 'cancelada'])}")
+
+    linhas.append("")
+    linhas.append("Top 5 emitentes (notas autorizadas):")
+    autorizadas = df[df['situacao'] == "autorizada"]
+    top5 = autorizadas.groupby("razao_social")["valor_total"].sum().sort_values(ascending=False).head(5)
+    linhas.append(top5.to_string())
+
+    return "\n".join(linhas)
 
 
+# MAIN = FUNCAO "PRINCIPAL": E O ROTEIRO QUE CHAMA AS OUTRAS FUNCOES NA ORDEM CERTA (O PIPELINE)
 def main():
-    df = ler_dados()
-    print(f"Linhas lidas: {len(df)}")
+    df = ler_dados() #PASSO 1: LE O CSV BRUTO
+    # PRINT MOSTRA NA TELA. O F ANTES DAS ASPAS PERMITE COLOCAR VALORES ENTRE { } DENTRO DO TEXTO
+    print(f"Linhas lidas: {len(df)}") #LEN(DF) = QUANTIDADE DE LINHAS (COMO UM COUNT(*))
 
-    df = remover_lixo(df)
-    df = padronizar_textos(df)
-    df = converter_tipos(df)
-    print(f"Linhas após limpeza: {len(df)}")
+    # CADA FUNCAO RECEBE A TABELA DO PASSO ANTERIOR E DEVOLVE A TABELA TRATADA (UMA "LINHA DE MONTAGEM")
+    df = remover_lixo(df) #PASSO 2: TIRA VAZIAS E DUPLICADAS
+    df = padronizar_textos(df) #PASSO 3: PADRONIZA TEXTOS E CNPJ
+    df = converter_tipos(df) #PASSO 4: CONVERTE VALORES E DATAS
+    print(f"Linhas após limpeza: {len(df)}") #MOSTRA QUANTAS LINHAS SOBRARAM
 
-    SAIDA.mkdir(exist_ok=True)
-    df.to_csv(SAIDA / "notas_limpas.csv", index=False, encoding="utf-8")
-    (SAIDA / "relatorio.txt").write_text(gerar_relatorio(df), encoding="utf-8")
-    print("Arquivos gravados em saida/")
+    SAIDA.mkdir(exist_ok=True) #CRIA A PASTA SAIDA. EXIST_OK=TRUE -> SE JA EXISTIR, NAO DA ERRO
+    # INDEX=FALSE -> NAO GRAVA A COLUNA DE NUMERACAO INTERNA DO PANDAS (0, 1, 2...) NO CSV
+    df.to_csv(SAIDA / "notas_limpas.csv", index=False, encoding="utf-8") #GRAVA A TABELA LIMPA EM CSV
+    (SAIDA / "relatorio.txt").write_text(gerar_relatorio(df), encoding="utf-8") #GERA O TEXTO DO RELATORIO E GRAVA NO ARQUIVO
+    print("Arquivos gravados em saida/") #AVISO FINAL NA TELA
 
 
+# ESTE IF SIGNIFICA: "SO RODE O MAIN SE ESTE ARQUIVO FOR EXECUTADO DIRETAMENTE (python limpeza.py)"
+# SE OUTRO ARQUIVO SO IMPORTAR UMA FUNCAO DAQUI (COMO NO TESTE DO CONVERTER_VALOR), O MAIN NAO RODA SOZINHO
 if __name__ == "__main__":
     main()
