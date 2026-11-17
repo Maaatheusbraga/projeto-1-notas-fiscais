@@ -1,113 +1,53 @@
-# Projeto 1: Limpeza de notas fiscais
+# Limpeza de Notas Fiscais com Python
 
-Um cliente mandou um export de notas fiscais **todo bagunçado**: três formatos de data, CNPJ com e sem máscara (e alguns sem o zero à esquerda), valores com `R$`, vírgula ou ponto, UF minúscula, linhas vazias e notas duplicadas.
+Pipeline em Python que recebe um export de notas fiscais com dados inconsistentes, padroniza e valida as informações e gera um relatório de negócio.
 
-Seu trabalho é transformar isso num arquivo limpo e num relatório. É o mesmo problema do seu trabalho, agora resolvido em Python.
+## O problema
+Recebi um CSV de notas fiscais com 341 linhas e dados sem padrão: datas em 3 formatos diferentes, CNPJs com e sem máscara (alguns sem os zeros à esquerda), valores com “R$”, vírgula ou ponto, além de linhas vazias e notas duplicadas. Do jeito que veio, não era possível somar valores nem agrupar por estado. A ideia foi carregar, limpar e padronizar esses dados para deixá-los prontos para análise.
 
-## Estrutura
+## O que o pipeline faz
 
-```
-projeto-1-notas-fiscais/
-├── dados/notas_fiscais_brutas.csv   ← entrada (341 linhas, separador ;)
-├── limpeza.py                       ← você escreve aqui
-├── verificar.py                     ← confere seu resultado (não edite)
-└── saida/                           ← criada pelo script
-```
+O CSV bruto contem 341 linhas → apos carregar ele remove vazias e duplicadas → padroniza textos e CNPJ → converte valores e datas → CSV limpo fica com 310 linhas + relatório
 
-## Como trabalhar
+| Etapa | Função | O que resolve |
+|---|---|---|
+| Leitura | `ler_dados` | Lê tudo como texto para preservar zeros à esquerda do CNPJ |
+| Limpeza | `remover_lixo` | Remove 6 linhas vazias e 15 notas duplicadas |
+| Padronização | `padronizar_textos` | UF, razão social e situação padronizadas; CNPJ com 14 dígitos |
+| Conversão | `converter_tipos` | Valores em 3 formatos viram número; datas em 3 formatos viram AAAA-MM-DD |
+| Relatório | `gerar_relatorio` | Totais, valor por UF, canceladas e top 5 emitentes |
 
-1. Faça **uma missão por vez**.
-2. Depois de cada missão, rode `python limpeza.py` e `python verificar.py`.
-3. Cada `[FALHA]` traz uma dica. Tente sozinho por pelo menos 20 minutos antes de pesquisar.
-4. Missão concluída → `git commit`.
+## Decisões técnicas
+**Ler o CSV com `dtype=str`:** se o pandas lesse o CNPJ como número, ele apagaria os zeros à esquerda (`00071271000138` viraria `71271000138`), o mesmo problema que acontece no Excel. Lendo tudo como texto, nenhum dado se perde na leitura e a conversão de tipos é feita depois, de forma controlada.
 
----
+ **Conversão de valores:** os valores chegavam em formatos diferentes (`R$ 1.234,56`, `1.234,56` e `1234.56`). A pista para identificar o formato brasileiro é a vírgula: quando ela existe, primeiro removo os pontos de milhar e depois troco a vírgula por ponto, chegando ao formato que o Python entende.
 
-## Missão 0: Preparar o ambiente
 
-No terminal do VS Code, dentro desta pasta:
+
+## Resultado
+
+- 341 linhas brutas → **310 notas válidas**
+- 13 verificações automáticas de qualidade passando (`verificar.py`), incluindo somas conferidas até o centavo
+- Relatório com valor total de **R$ 3.924.451,44**, distribuído em 8 UFs
+
+## Como rodar
 
 ```bash
 python -m venv .venv
-```
-
-```bash
 .venv\Scripts\activate
+pip install -r requirements.txt
+python limpeza.py
+python verificar.py
 ```
 
-```bash
-pip install pandas
-```
+Os resultados ficam em `saida/notas_limpas.csv` e `saida/relatorio.txt`.
 
-```bash
-pip freeze > requirements.txt
-```
+## Tecnologias
 
-**Para entender:** o que é um ambiente virtual e por que cada projeto tem o seu?
+Python 3.11 · pandas · Git
 
-## Missão 1: Versionar desde o início
+## O que aprendi
 
-```bash
-git init
-```
-
-Crie um arquivo `.gitignore` com as linhas `.venv/` e `saida/`. Depois:
-
-```bash
-git add .
-```
-
-```bash
-git commit -m "Projeto 1: estrutura inicial"
-```
-
-Crie um repositório no GitHub chamado `projeto-1-notas-fiscais` e faça o push (o GitHub mostra os comandos).
-
-## Missão 2: Ler os dados
-
-A função `ler_dados()` já está pronta. Rode `python limpeza.py`, depois abra o terminal Python (`python`) e explore:
-
-```python
-import pandas as pd
-df = pd.read_csv("dados/notas_fiscais_brutas.csv", sep=";", dtype=str)
-df.head(10)
-df.info()
-df["uf"].value_counts()
-df["situacao"].value_counts()
-```
-
-**Anote no diário:** quais problemas você encontrou em cada coluna?
-
-## Missão 3: Remover linhas vazias e duplicadas
-
-Implemente `remover_lixo()`. Ponte com o SQL: é um `SELECT DISTINCT` com `WHERE numero_nf IS NOT NULL`.
-
-## Missão 4: Padronizar textos
-
-Implemente `padronizar_textos()`. `TRIM`, `UPPER` e `LOWER` existem no pandas como `.str.strip()`, `.str.upper()` e `.str.lower()`.
-
-## Missão 5: Converter valores e datas
-
-Esta é a missão mais difícil.
-
-- **5a.** Implemente `converter_valor()` para **um** valor e teste no terminal antes de aplicar na tabela.
-- **5b.** Implemente `converter_tipos()`.
-
-Cuidado: `"1234.56"` e `"1.234,56"` exigem tratamentos diferentes. Como saber qual é qual?
-
-## Missão 6: Relatório
-
-Implemente `gerar_relatorio()`. Use `groupby`, que é o `GROUP BY` do pandas. Ponto extra: grave também o relatório em CSV.
-
-## Missão 7: Fechamento
-
-- [ ] `python verificar.py` com todas as verificações OK
-- [ ] README do seu repositório explicando: problema, como rodar, decisões que você tomou
-- [ ] Commit final e push
-- [ ] Gravar 2 minutos explicando o projeto (só para você ouvir)
-- [ ] Marcar "Projeto 1" na trilha
-
-## Desafio extra (depois de terminar)
-
-- Validar o dígito verificador do CNPJ e separar as linhas inválidas num arquivo `saida/rejeitadas.csv`.
-- Refazer o projeto do zero, **sem olhar o seu código**, em menos de 1 hora.
+**Pandas é SQL com outra sintaxe:** filtros viraram `WHERE`, `groupby` virou `GROUP BY` e `fillna` funcionou como `COALESCE` para unificar 3 formatos de data. Partir do que eu já sabia em SQL acelerou muito o aprendizado.
+- **Explorar antes de limpar:** com `info()` e `value_counts()` descobri problemas que não estavam visíveis, como 32 escritas diferentes para 8 UFs e CNPJs com 5 tamanhos diferentes.
+- **Validar com números, não com a aparência:** um resultado que "parecia certo" no `print` ainda era texto, não número. O verificador comparando as somas até o centavo foi o que garantiu que a conversão estava correta.
